@@ -1,0 +1,14 @@
+body {
+	font-family: Helvetica;
+	width: 100%;
+}
+
+h2 {
+	text-align: center;
+}
+
+#vis-container {
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+}
