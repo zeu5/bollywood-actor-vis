@@ -1,7 +1,9 @@
-from flask import Flask, render_template, g
+from flask import Flask, render_template, g, request, jsonify
+from re import search, UNICODE
 import sqlite3
 import os
 import csv
+
 
 app = Flask(__name__)
 
@@ -61,21 +63,68 @@ def populate_data(db):
 				cursor.execute('insert into celebrities values (?, ?, ?, ?, ?)',data_row)
 			except Exception, e:
 				# When it fails integrity error or null data is tried to be inserted
-				print "Count not insert entry into the database : ", " ".join(data_row)
-				print e
 				continue
 		db.commit()
 
-
-	def process_data(db):
-		pass
-
 	csv_data = get_csv_data()
 	insert_data(csv_data,db)
-	process_data(db)
-
 
 
 @app.route('/',methods=["GET"])
 def index():
+	"""
+	Returns the html page which makes API calls to the server
+	"""
 	return render_template('index.html')
+
+@app.route('/get_movies', methods=["GET"])
+def get_movies():
+	"""
+	Given an actor this API returns an array of movies the actor has acted in.
+	The JSON format is {"Movies" : [<array_of_movies>]}
+	"""
+	actor_name = request.args['actor_name']
+	if search('[\w ]+', actor_name, UNICODE):
+		db = get_db()
+		cursor = db.cursor()
+		cursor.execute('select distinct movie_name from celebrities where role=? and name=?',['Actor',actor_name])
+		rows = cursor.fetchall()
+		return jsonify(**{"Movies":map(lambda x: x[0], rows)})
+	else:
+		return ('',204)
+
+
+@app.route('/get_actors', methods=["GET"])
+def get_actors():
+	"""
+	Given an actor this API returns an array of actors who have acted in the movie.
+	The JSON format is {"Actors" : [<array_of_actors>]}
+	"""
+	movie_name = request.args['movie_name']
+	if search('[\w ]+', movie_name, UNICODE):
+		db = get_db()
+		cursor = db.cursor()
+		cursor.execute('select distinct name from celebrities where role=? and movie_name=?',['Actor',movie_name])
+		rows = cursor.fetchall()
+		return jsonify(**{"Actors":map(lambda x: x[0], rows)})
+	else:
+		return ('',204)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

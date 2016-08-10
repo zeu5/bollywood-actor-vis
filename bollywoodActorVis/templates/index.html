@@ -2,14 +2,19 @@
 <html>
 <head>
 	<title>Bollywood Actor Visualization</title>
-</head>
-<body>
-	<h2>Bolywood Actor Visualization</h2>
-	<div id="vis-container"></div>
 
 	<script type="text/javascript" src="{{ url_for('static', filename='d3.min.js') }}"></script>
 	<script type="text/javascript" src="{{ url_for('static', filename='jQuery.min.js') }}"></script>
-	<script type="text/javascript" src="{{ url_for('static', filename='index.js') }}"></script>
+
 	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='index.css') }}">
+</head>
+<body>
+	<h2>Bolywood Actor Visualization</h2>
+	<div>
+		<svg id="vis-container" width="700px" height="400px"></svg>
+	</div>
+
+	<script type="text/javascript" src="{{ url_for('static', filename='index.js') }}"></script>
+
 </body>
 </html>
