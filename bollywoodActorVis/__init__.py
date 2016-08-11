@@ -17,7 +17,7 @@ def get_db():
 	Opens a database connection if it doesnt exist otherwise returns from app context.
 	"""
 	if not hasattr(g, 'sqlite_db'):
-		g.sqlite_db = sqlite3.connect(app.config['DATABASE'])
+		g.sqlite_db = sqlite3.connect(app.config.get('DATABASE'))
 	return g.sqlite_db
 
 def init_db():
@@ -70,6 +70,14 @@ def populate_data(db):
 	insert_data(csv_data,db)
 
 
+@app.teardown_appcontext
+def close_db(error):
+	""" Close Database after request is processed """
+	if hasattr(g,'sqlite_db'):
+		g.sqlite_db.close()
+
+
+
 @app.route('/',methods=["GET"])
 def index():
 	"""
@@ -81,32 +89,48 @@ def index():
 def get_movies():
 	"""
 	Given an actor this API returns an array of movies the actor has acted in.
-	The JSON format is {"Movies" : [<array_of_movies>]}
+	The JSON format is an array of object where each object is a map of actor to an array of his movies
+	[ { actor1 : [movie1, movie2] }, { actor2 : [movie2, movie3] } ]
 	"""
-	actor_name = request.args['actor_name']
-	if search('[\w ]+', actor_name, UNICODE):
-		db = get_db()
-		cursor = db.cursor()
-		cursor.execute('select distinct movie_name from celebrities where role=? and name=?',['Actor',actor_name])
-		rows = cursor.fetchall()
-		return jsonify(**{"Movies":map(lambda x: x[0], rows)})
+	actors = request.args['actors']
+	if search('([\w ]+,)*([\w ]+)',actors):
+		# If actors are in comma seperated format
+		actors = actors.split(',')
+		result = []
+		db_cursor = get_db().cursor()
+		for actor in actors:
+			actor = actor.strip()
+			db_cursor.execute('select distinct movie_name from celebrities where role=? and name=?',['Actor',actor])
+			rows = db_cursor.fetchall()
+			if len(rows):
+				result.append({actor:map(lambda x: x[0], rows)})
+		return jsonify(result)
 	else:
 		return ('',204)
+
 
 
 @app.route('/get_actors', methods=["GET"])
 def get_actors():
 	"""
 	Given an actor this API returns an array of actors who have acted in the movie.
-	The JSON format is {"Actors" : [<array_of_actors>]}
+	The JSON format is as follows
+	[ { movie1 : [actor1, actor2] }, { movie2 : [actor2, actor3] } ]
 	"""
-	movie_name = request.args['movie_name']
-	if search('[\w ]+', movie_name, UNICODE):
-		db = get_db()
-		cursor = db.cursor()
-		cursor.execute('select distinct name from celebrities where role=? and movie_name=?',['Actor',movie_name])
-		rows = cursor.fetchall()
-		return jsonify(**{"Actors":map(lambda x: x[0], rows)})
+
+	movies = request.args['movies']
+	if search('([\w ]+,)*([\w ]+)',movies):
+		# If movies are in comma seperated format
+		movies = movies.split(',')
+		result = []
+		db_cursor = get_db().cursor()
+		for movie in movies:
+			movie = movie.strip()
+			db_cursor.execute('select distinct name from celebrities where role=? and movie_name=?',['Actor',movie])
+			rows = db_cursor.fetchall()
+			if len(rows):
+				result.append({movie:map(lambda x: x[0], rows)})
+		return jsonify(result)
 	else:
 		return ('',204)
 
