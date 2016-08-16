@@ -13,8 +13,7 @@ h2 {
 }
 
 .nodes > circle {
-	fill : red;
-	stroke-width : 1.5px;
+	stroke: black;
 }
 
 .links > line {

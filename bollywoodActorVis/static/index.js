@@ -283,7 +283,7 @@
 
 		var svg = d3.select("svg"), simulation, node, link, collapsed = false;
 		    
-		var color = d3.scaleOrdinal(d3.schemeCategory20);
+		var color = d3.scaleOrdinal(d3.schemeCategory10);
 
 		function init(){
 			var width = parseInt(svg.attr('width'));
@@ -295,7 +295,8 @@
 			simulation = d3.forceSimulation()
 			    .force("link", d3.forceLink())
 			    .force("charge", d3.forceManyBody())
-			    .force("center", d3.forceCenter(width / 2, height / 2));
+			    .force("center", d3.forceCenter(width / 2, height / 2))
+			    .on('tick',simulation_tick);
 
 			graph.add_actor("A. Morkel");
 			update();    
@@ -313,11 +314,13 @@
 
 			node = svg.select('g.nodes').selectAll('circle').data(nodes);
 			
-			node.attr('title',function(d){return d.id;})
+			node.attr('fill',function(d){ return color(d.group); })
+				.attr('title',function(d){return d.id;})
 				.attr('r',function(d){return d.group*5;});
 			
 			node.enter()
 				.append('circle')
+				.attr('fill',function(d){ return color(d.group); })
 				.attr('title',function(d){return d.id;})
 				.attr('r',function(d){return d.group*5;});
 			
@@ -331,7 +334,6 @@
 
 			simulation.nodes(nodes);
 			simulation.force('link').links(links);
-			simulation.on('tick',simulation_tick);
 		}
 
 		function simulation_tick(){
