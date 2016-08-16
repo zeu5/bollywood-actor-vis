@@ -96,14 +96,14 @@ def get_movies():
 	if search('([\w ]+,)*([\w ]+)',actors):
 		# If actors are in comma seperated format
 		actors = actors.split(',')
-		result = []
+		result = {}
 		db_cursor = get_db().cursor()
 		for actor in actors:
 			actor = actor.strip()
 			db_cursor.execute('select distinct movie_name from celebrities where role=? and name=?',['Actor',actor])
 			rows = db_cursor.fetchall()
 			if len(rows):
-				result.append({actor:map(lambda x: x[0], rows)})
+				result[actor] = map(lambda x: x[0], rows)
 		return jsonify(result)
 	else:
 		return ('',204)
@@ -122,14 +122,14 @@ def get_actors():
 	if search('([\w ]+,)*([\w ]+)',movies):
 		# If movies are in comma seperated format
 		movies = movies.split(',')
-		result = []
+		result = {}
 		db_cursor = get_db().cursor()
 		for movie in movies:
 			movie = movie.strip()
 			db_cursor.execute('select distinct name from celebrities where role=? and movie_name=?',['Actor',movie])
 			rows = db_cursor.fetchall()
 			if len(rows):
-				result.append({movie:map(lambda x: x[0], rows)})
+				result[movie] = map(lambda x: x[0], rows)
 		return jsonify(result)
 	else:
 		return ('',204)

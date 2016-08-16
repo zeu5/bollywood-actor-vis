@@ -11,3 +11,13 @@ h2 {
 	margin-left: 25%;
 	border: 1px solid grey;
 }
+
+.nodes > circle {
+	fill : red;
+	stroke-width : 1.5px;
+}
+
+.links > line {
+	stroke: black;
+	stroke-opacity : 0.6;
+}
