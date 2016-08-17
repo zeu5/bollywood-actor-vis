@@ -289,8 +289,8 @@
 			var width = parseInt(svg.attr('width'));
 			var height = parseInt(svg.attr('height'));
 
-			svg.append('g').attr('class','nodes');
 			svg.append('g').attr('class','links');
+			svg.append('g').attr('class','nodes');
 
 			simulation = d3.forceSimulation()
 			    .force("link", d3.forceLink())
@@ -298,7 +298,7 @@
 			    .force("center", d3.forceCenter(width / 2, height / 2))
 			    .on('tick',simulation_tick);
 
-			graph.add_actor("A. Morkel");
+			graph.add_movie("Swades");
 			update();    
 
 		}    
@@ -315,17 +315,20 @@
 			node = svg.select('g.nodes').selectAll('circle').data(nodes);
 			
 			node.attr('fill',function(d){ return color(d.group); })
-				.attr('title',function(d){return d.id;})
-				.attr('r',function(d){return d.group*5;});
-			
+				.attr('r',function(d){return d.group*5;})
+				.select('title').text(function(d){ return d.id; });
+
 			node.enter()
 				.append('circle')
 				.attr('fill',function(d){ return color(d.group); })
-				.attr('title',function(d){return d.id;})
-				.attr('r',function(d){return d.group*5;});
+				.attr('r',function(d){return d.group*5;})
+				.call(d3.drag()
+					.on('start',drag_started)
+					.on('drag',drag)
+					.on('end',drag_end))
+				.append('title').text(function(d){return d.id;});;
 			
-			node.exit().remove();
-			
+			node.exit().remove();			
 			
 			link = svg.select('g.links').selectAll('line');
 			node = svg.select('g.nodes').selectAll('circle');
@@ -334,6 +337,24 @@
 
 			simulation.nodes(nodes);
 			simulation.force('link').links(links);
+			simulation.restart();
+		}
+
+		function drag_started(d){
+			if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+			d.fx = d.x;
+			d.fy = d.y;
+		}
+
+		function drag(d) {
+			d.fx = d3.event.x;
+  			d.fy = d3.event.y;
+		}
+
+		function drag_end(d) {
+			if (!d3.event.active) simulation.alphaTarget(0);
+			d.fx = null;
+			d.fy = null;
 		}
 
 		function simulation_tick(){
@@ -344,8 +365,7 @@
 				.attr('y2',function(d){ return d.target.y; });
 
 			node
-				.attr('cx', function(d) { return d.x; })
-				.attr('cy', function(d) { return d.y; });
+				.attr('transform', function(d) { return "translate("+d.x+','+d.y+")"; });
 
 		}
 

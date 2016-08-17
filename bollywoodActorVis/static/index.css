@@ -3,13 +3,17 @@ body {
 	width: 100%;
 }
 
-h2 {
-	text-align: center;
-}
+#container {
+	margin: 0 auto;
+	max-width: 1000px;
+}	
 
 #vis-container {
-	margin-left: 25%;
 	border: 1px solid grey;
+}
+
+h2 {
+	padding:15px 0px;
 }
 
 .nodes > circle {
