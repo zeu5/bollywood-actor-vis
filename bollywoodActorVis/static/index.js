@@ -44,10 +44,11 @@
 
 	var graph = (function(){
 
-		var actor_array = [];
-		var movie_array = [];
-		var actor_movie_array = [];
-		var actor_actor_array = [];
+		var actor_array = [],
+			movie_array = [],
+			actor_movie_array = [],
+			actor_actor_array = [],
+			nodes = [];
 
 
 		function get_zero_array(n){
@@ -59,12 +60,30 @@
 		}
 
 		function matrix_transpose(matrix){
-			d3.transpose(matrix);
+			var rows = matrix.length ? matrix.length : null;
+			var cols = matrix[0].length ? matrix[0].length : null;
+			if( !rows || !cols ){
+				return null;
+			}
+			var result = [];
+			for(var i = 0; i < cols; i++){
+				result.push([]);
+				for (var j = 0; j < rows; j++) {
+					result[i].push(matrix[j][i]);
+				}
+			}
+			return result;
 		}
 
 		function matrix_mul(matrix_a, matrix_b){
-			var rows_a = matrix_a.length, cols_a = matrix_a[0].length,
-				rows_b = matrix_b.length, cols_b = matrix_b[0].length;
+			var rows_a = matrix_a.length ? matrix_a.length : null,
+				cols_a = matrix_a[0].length ? matrix_a[0].length : null,
+				rows_b = matrix_b.length ? matrix_b.length : null,
+				cols_b = matrix_b[0].length ? matrix_b[0].length : null;
+
+			if ( !rows_a || !rows_b || !cols_a || !cols_b){
+				return null;
+			}	
 
 			var result_matrix = new Array(rows_a);
 			if(cols_a !== rows_b){
@@ -115,6 +134,11 @@
 					return;
 				} else {
 					var actor_index = actor_array.push(actor.trim()) - 1;
+					nodes.push({
+						"id" : actor.trim(),
+						"group" : 1
+					});
+
 					actor_movie_array.push(get_zero_array(movie_array.length));
 
 					// No need to go through every movie in the view only the one's that are given
@@ -142,6 +166,10 @@
 					return; 
 				} else {
 					movie_array.push(movie.trim());
+					nodes.push({
+						"id" : movie.trim(),
+						"group" : 2
+					})
 
 					// Need to go through all the actors as a new column should be added
 					for(var i = 0; i < actor_array.length; i++){
@@ -218,23 +246,24 @@
 
 				//Returns nodes to be used for d3 force layout. The actors come first then the movies. If collapsed the movies are skipped
 
-				var nodes = [];
-				for(var i = 0 ; i<actor_array.length; i++){
-					nodes.push({
-						"id" : actor_array[i],
-						"group" : 1
-					});
-				}
-				if(!collapsed){
-					for(var i = 0 ; i<movie_array.length; i++){
-						nodes.push({
-							"id" : movie_array[i],
-							"group" : 2
-						});
-					}
-				}
+				// var nodes = [];
+				// for(var i = 0 ; i<actor_array.length; i++){
+				// 	nodes.push({
+				// 		"id" : actor_array[i],
+				// 		"group" : 1
+				// 	});
+				// }
+				// if(!collapsed){
+				// 	for(var i = 0 ; i<movie_array.length; i++){
+				// 		nodes.push({
+				// 			"id" : movie_array[i],
+				// 			"group" : 2
+				// 		});
+				// 	}
+				// }
 
-				return nodes;
+
+				return collapsed? nodes.filter(function(node){return (node.group == 1 || node.group == 3)}) : nodes;
 			},
 
 			"get_links" : function(collapsed){
@@ -248,8 +277,8 @@
 						for (var j = 0; j < actor_array.length; j++) {
 							if(actor_actor_array[i][j]){
 								links.push({
-									"source" : i,
-									"target" : j,
+									"source" : actor_array[i],
+									"target" : actor_array[j],
 									"value" : actor_actor_array[i][j]
 								})
 							}
@@ -260,8 +289,8 @@
 						for (var j = 0; j < movie_array.length; j++) {
 							if (actor_movie_array[i][j]){
 								links.push({
-									"source" : i,
-									"target" : actor_array.length+j
+									"source" : actor_array[i],
+									"target" : movie_array[j]
 								})
 							}
 						}
@@ -273,8 +302,18 @@
 
 			"collapse_movies" : function(){
 				// To compute the actor to actor adjacency matrix. actor_movie_array * transpose (actor_movie_array)
-				actor_actor_array = matrix_mul( actor_movie_array * matrix_transpose(actor_movie_array) );
+				actor_actor_array = matrix_mul( actor_movie_array, matrix_transpose(actor_movie_array) );
 				return;
+			},
+
+			"generalise_nodes" : function(){
+				nodes.forEach(function(node){
+					if(node.group == 1){
+						node.group = 3;
+					} else if(node.group == 2){
+						node.group = 4;
+					}
+				})
 			}
 		}
 	})();
@@ -286,24 +325,51 @@
 		var color = d3.scaleOrdinal(d3.schemeCategory10);
 
 		function init(){
-			var width = parseInt(svg.attr('width'));
-			var height = parseInt(svg.attr('height'));
+			var dim = d3.select('body').node().getBoundingClientRect();
+
+			svg.attr('width',dim.width);
+			svg.attr('height',dim.height);
 
 			svg.append('g').attr('class','links');
 			svg.append('g').attr('class','nodes');
 
 			simulation = d3.forceSimulation()
-			    .force("link", d3.forceLink())
+				.alphaTarget(1)
+			    .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(50))
 			    .force("charge", d3.forceManyBody())
-			    .force("center", d3.forceCenter(width / 2, height / 2))
+			    .force("center", d3.forceCenter(dim.width / 2, dim.height / 2))
+			    .force('X',d3.forceX(dim.width/2))
+			    .force('Y',d3.forceY(dim.height/2))
 			    .on('tick',simulation_tick);
+
+			d3.select('div#collapse-button').on('click',toggle_collapse_graph);
 
 			graph.add_movie("Swades");
 			update();    
 
 		}    
 
+		function toggle_collapse_graph(event){
+
+			if(collapsed){
+				collapsed = false;
+				d3.select(this).text("Collapse");
+			} else {
+				collapsed = true;
+				d3.select(this).text("Expand");
+				graph.collapse_movies();
+			}
+			update();
+
+			return null;
+		}
+
 		function update(){
+
+			if(collapsed){ 
+				graph.collapse_movies(); 
+			}
+
 			var nodes = graph.get_nodes(collapsed);
 			var links = graph.get_links(collapsed);
 
@@ -315,13 +381,13 @@
 			node = svg.select('g.nodes').selectAll('circle').data(nodes);
 			
 			node.attr('fill',function(d){ return color(d.group); })
-				.attr('r',function(d){return d.group*5;})
+				.attr('r',function(d){return (d.group == 1 || d.group == 3 )? 5 : 10;})
 				.select('title').text(function(d){ return d.id; });
 
 			node.enter()
 				.append('circle')
 				.attr('fill',function(d){ return color(d.group); })
-				.attr('r',function(d){return d.group*5;})
+				.attr('r',function(d){return (d.group == 1 || d.group == 3 )? 5 : 10;})
 				.call(d3.drag()
 					.on('start',drag_started)
 					.on('drag',drag)
@@ -337,7 +403,7 @@
 
 			simulation.nodes(nodes);
 			simulation.force('link').links(links);
-			simulation.restart();
+			simulation.alphaTarget(1).restart();
 		}
 
 		function drag_started(d){
@@ -365,31 +431,54 @@
 				.attr('y2',function(d){ return d.target.y; });
 
 			node
-				.attr('transform', function(d) { return "translate("+d.x+','+d.y+")"; });
+				.attr('cx', function(d) { return d.x; })
+				.attr('cy', function(d) { return d.y; });
 
 		}
 
 		function node_click(data){
-			if(data.group == 1){
-				server.get_movies(data.id,function(data, actor){
+			graph.generalise_nodes();
+
+
+			if(collapsed){
+				return null;
+			} else {
+				if(data.group == 3){
+					actor_click(data.id);
+				} else if(data.group == 4){
+					movie_click(data.id);
+				}
+			}
+
+			function actor_click(actor){
+				server.get_movies(actor,function(data, actor){
 					var movies_not_there = graph.update_actor(actor,data);
+
+					update();
+
 					if(movies_not_there.length === 0){return;}
-					server.get_actors(movies_not_there,function(data, movies){
-						movies.forEach(function(movie){
-							graph.add_movie(movie,data[movie]);
+					movies_not_there.forEach(function(movie){
+						server.get_actors(movie,function(actors, movie){
+							graph.add_movie(movie,actors);
+							update();
 						});
-						update();
 					});
 				});
-			} else if(data.group == 2){
-				server.get_actors(data.id,function(data, movie){
+			}
+
+			function movie_click(movie){
+				server.get_actors(movie,function(data, movie){
 					var actors_not_there = graph.update_movie(movie,data);
+
+					update();
+
 					if( actors_not_there.length === 0 ){ return; }
-					server.get_movies(actors_not_there,function(data, actors){
-						actors.forEach(function(actor){
-							graph.add_actor(actor,data[actor]);
+
+					actors_not_there.forEach(function(actor){
+						server.get_movies(actor,function(movies,actor){
+							graph.add_actor(actor, movies);
+							update();
 						});
-						update();
 					});
 				});
 			}
