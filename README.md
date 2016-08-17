@@ -13,9 +13,11 @@ The app runs using flask. You can install flask by running
 You will also need sqlite3 which you can install by running 
 
 for mac
+
 	brew install sqlite3
 
 for linux
+
 	sudo apt-get install sqlite3
 
 
